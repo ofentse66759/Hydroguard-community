@@ -1,77 +1,77 @@
-# HydroGuard
+# HydroGuard Backend
 
-HydroGuard is a flood-risk alert and emergency support platform that helps communities monitor flood danger, receive instant warnings, and access critical safety information. It combines predictive flood scoring, alert subscriptions, safe-zone guidance, emergency contacts, and community reporting.
+A small Node.js/Express API that powers the HydroGuard Community frontend:
+accounts, sessions, flood reports, and community alerts, all stored in a
+local JSON file (no database server to install).
 
-## Features
+## Setup
 
-- Flood risk detection with model confidence scoring.
-- SMS alerts for high flood risk.
-- WhatsApp alerts with map links.
-- Safe zones map and evacuation routes.
-- Emergency contacts for police, ambulance, and flood hotlines.
-- Community flood reports with moderation workflow.
-- Location-aware warnings and forecast indicators.
-- Secure authentication and access control.
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
 
-## Data Sources
+Open `.env` and set `JWT_SECRET` to a real random value, e.g.:
 
-HydroGuard uses and combines public environmental and weather data sources, including:
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
 
-- SAWS
-- DWS
-- NASA POWER
-- GPM
-- ESA CCI
+Then start it:
 
-## Security
+```bash
+npm start
+```
 
-HydroGuard is designed with security and privacy in mind:
+The API listens on `http://localhost:3001/api` by default — the same
+address the frontend already points to (`API_BASE` in `index.html`). Open
+`index.html` in a browser with the server running and it'll use the real
+backend instead of its local-storage fallback.
 
-- HTTPS-only communication.
-- HttpOnly, Secure, SameSite=Strict cookies.
-- Session regeneration on login.
-- Role-based access control for residents, moderators, and admins.
-- Password hashing using bcrypt or argon2.
-- Sensitive data encryption at rest.
-- Server-side validation and rate limiting.
-- Audit logs for reports, moderation, and login activity.
-- POPIA-compliant data handling.
+## How accounts & roles work
 
-## Alerts
+- Anyone can log in from the app. If the contact (phone/email) doesn't
+  exist yet, an account is created automatically on first login — always
+  with role `"user"`.
+- There's no role picker in the UI anymore, and the server never trusts a
+  role sent from the client.
+- To make someone a moderator or admin (so they can review/approve
+  community reports), run, on the server:
 
-Users can subscribe to:
-- SMS flood alerts.
-- WhatsApp broadcast alerts.
+  ```bash
+  npm run promote -- resident@example.com moderator
+  # or
+  node scripts/promote-user.js resident@example.com admin
+  ```
 
-## Emergency Contacts
+  They need to have logged in at least once already so the account exists.
 
-HydroGuard includes quick access to:
-- Police emergency line.
-- Ambulance / medical emergency line.
-- Flood hotline.
-- City of Tshwane contacts.
+## API
 
-## Version
+| Method | Path                | Auth              | Description                              |
+|--------|---------------------|-------------------|-------------------------------------------|
+| POST   | `/api/auth/session`  | —                 | Log in, or register on first use          |
+| GET    | `/api/auth/me`       | required          | Get the current session's user            |
+| POST   | `/api/auth/logout`   | —                 | No-op (stateless tokens)                  |
+| GET    | `/api/reports`       | optional          | List reports (filtered by role)           |
+| POST   | `/api/reports`       | required          | Submit a new report (starts "pending")    |
+| PATCH  | `/api/reports/:id`   | moderator/admin   | Approve or reject a report                |
+| GET    | `/api/alerts`        | —                 | List community alerts                     |
 
-- `1.0.0`
+Sessions are JSON Web Tokens sent as `Authorization: Bearer <token>`.
+Passwords are hashed with bcrypt and never stored or returned in plain text.
 
-## Status
+## Data
 
-Current interface includes:
-- Flood probability display.
-- Model confidence indicators.
-- Rainfall, water level, and soil moisture metrics.
-- Map view placeholder.
-- Past flood reports and sensor data placeholder.
+Everything is stored in `data/db.json` (created automatically, git-ignored).
+It's fine for a demo or small deployment; swap `src/db.js` for a real
+database (Postgres, etc.) later without touching the routes much, since
+they only talk to `db.get(...)`.
 
-## Access
+## Notes
 
-Users must log in to use HydroGuard. An account is required to check flood risk and submit reports.
-
-## License
-
-Add your preferred license here.
-
-## Contributing
-
-Add contribution guidelines here if you want the project open to collaborators.
+- `CORS_ORIGIN` in `.env` defaults to `*` for local development — lock this
+  down to your real frontend origin before deploying.
+- Login attempts are rate-limited (20 per 15 minutes per IP) to slow down
+  brute-force guessing.

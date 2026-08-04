@@ -1,0 +1,21 @@
+{
+  "name": "hydroguard-backend",
+  "version": "1.0.0",
+  "description": "Backend API for HydroGuard Community (auth, reports, alerts)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "promote": "node scripts/promote-user.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "lowdb": "^1.0.0"
+  }
+}
